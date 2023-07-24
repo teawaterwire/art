@@ -4,23 +4,16 @@
 
 (defn c-onboarding []
   [:div.text-center
-   [:span.font-bold.text-xl "Welcome to a  "
-    [:a.underline {:href "https://mirror.xyz/penseur.eth/mvqOkcw0ABBgRjSD49Pb_V3lbpQMxxi68KCHabYj5RA" :target "_blank"} "web4ᵗʰ"]
-    " app!"]
+   [:span.font-bold.text-xl "Welcome to my art gallery 🤗"]
    [:br]
-   [:div.text-left.mt-2 
-    "You can say "
+   [:div.text-left.mt-2
+    "My name is Theo. I draw with double ended fiber-tip pens. If you see something you like, feel free to collect  it. "
     [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(actions/send :app.actions.examples.hello/hello)} "Hello"]
-    ", "  "start a game of "
-    [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(actions/send :app.actions.examples.pingpong/pong)} "Ping"]
-    " or create a "
-    [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(actions/send :app.actions.examples.todolist/todos)} "Todo list"]]
+              :on-click #(actions/send :app.actions.browse/browse)} "See art pieces"]
+    "."]
    [:br]
    [:div.italic.text-left "Want to keep this session? Save the session id found below." [:br] 
-    "Need help? Just start a chat with support!"]])
+    "Need help? Just start a chat with me"]])
 
 (defmethod actions/get-action ::onboarding
   [_ _ args]

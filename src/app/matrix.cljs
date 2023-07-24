@@ -169,5 +169,5 @@
         [:button {:class "btn-gray"
                   :on-click #(rf/dispatch [::toggle-chat-with-support])}
          (if @(rf/subscribe [:get ::support?])
-           "Stop chat with support"
-           "Start chat with support")]]]])
+           "Stop chat with me"
+           "Start chat with me")]]]])
