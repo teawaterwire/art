@@ -34,11 +34,10 @@
     "https://bafybeie2z3cohdet3r76uu75hdyzgk25brma67qilqe262howlvef23wce.ipfs.nftstorage.link/"]
    ])
 
-(defn art-pieces []
+(defn c-art-pieces []
   [:<>
    [:div {:class "hand-written font-bold text-4xl"} "Art pieces"]
    [:br ]
-;;    [:div {:class "font-mono"} "In chronological order"]
    [:div {:class "grid gap-3 grid-cols-3"}
     (for [[title _date url :as image] images]
       ^{:key title}
@@ -46,7 +45,7 @@
              :src url 
              :on-click #(actions/send ::see-details image)}])]])
 
-(defn art-piece [[title date url]]
+(defn c-art-piece [[title date url]]
   [:div 
    [:div {:class "hand-written font-bold text-4xl"} title]
    [:div {:class "font-mono"} date]
@@ -54,12 +53,14 @@
     [:> PhotoView {:src url}
      [:img {:src url :class "cursor-zoom-in"}]]]
    [:br]
-   [:button {:class "btn-blue mr-4"} "Collect digital copy"]
+   [:button {:class "btn-blue mr-4"
+             :on-click #(actions/send :app.actions.collect/collect title)} 
+    "Collect digital copy"]
    [:button {:class "btn-gray"
              :on-click #(actions/send ::buy title)} 
     "Buy original copy"]])
 
-(defn buy-message [title]
+(defn c-buy [title]
   [:div
    "Send me your offer via the chat below "
    "if you're willing to acquire the one and only physical copy of:"
@@ -68,16 +69,16 @@
 
 (defmethod actions/get-action ::buy
   [_action _db title]
-  {:component buy-message
+  {:component c-buy
    :state title})
 
 (defmethod actions/get-action ::see-details
   [_action _db image]
-  {:component art-piece
+  {:component c-art-piece
    :state image})
 
 (defmethod actions/get-action ::browse
   []
-  {:component art-pieces})
+  {:component c-art-pieces})
 
 (actions/add-primary-action ::browse "See art pieces" {:default? true})
