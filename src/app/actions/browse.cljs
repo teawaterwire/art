@@ -52,7 +52,24 @@
    [:div {:class "font-mono"} date]
    [:> PhotoProvider
     [:> PhotoView {:src url}
-     [:img {:src url :class "cursor-zoom-in"}]]]])
+     [:img {:src url :class "cursor-zoom-in"}]]]
+   [:br]
+   [:button {:class "btn-blue mr-4"} "Collect digital copy"]
+   [:button {:class "btn-gray"
+             :on-click #(actions/send ::buy title)} 
+    "Buy original copy"]])
+
+(defn buy-message [title]
+  [:div
+   "Send me your offer via the chat below "
+   "if you're willing to acquire the one and only physical copy of:"
+   [:br]
+   [:div {:class "hand-written text-4xl mt-4 mb-4"} title]])
+
+(defmethod actions/get-action ::buy
+  [_action _db title]
+  {:component buy-message
+   :state title})
 
 (defmethod actions/get-action ::see-details
   [_action _db image]
