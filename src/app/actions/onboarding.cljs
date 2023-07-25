@@ -3,8 +3,8 @@
    [app.actions.entrypoint :as actions]))
 
 (defn c-onboarding []
-  [:div.text-center
-   [:span.font-bold.text-xl "Welcome to my art gallery 🤗"]
+  [:div {:class "text-center"}
+   [:span.font-bold.text-xl {:class "hand-written text-3xl"} "Welcome to my Art gallery 🤗"]
    [:br]
    [:div.text-left.mt-2
     "My name is Theo. I draw with double ended fiber-tip pens. If you see something you like, feel free to collect  it. "

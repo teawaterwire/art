@@ -26,6 +26,7 @@
   "dependencies": {
     "matrix-js-sdk": "^20.1.0",
     "react": "17.0.1",
-    "react-dom": "17.0.1"
+    "react-dom": "17.0.1",
+    "react-photo-view": "^1.2.3"
   }
 }
