@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 
 import "solmate/tokens/ERC1155.sol";
 import "solmate/auth/Owned.sol";
+import "solady/utils/Base64.sol";
 
 contract Art is ERC1155, Owned {
     uint256 public constant ART_SUPPLY = 99;
@@ -27,15 +28,22 @@ contract Art is ERC1155, Owned {
         _mint(msg.sender, artId, 1, "");
     }
 
-    function uri(uint256 id) public view override returns (string memory) {
-        return uris[id];
+    function uri(uint256 artId) public view override returns (string memory) {
+        if (artId >= nextArtId) revert ArtDoesNotExist(artId);
+        return uris[artId];
     }
 
-    function addArt(string calldata name, string calldata image) external onlyOwner {
+    function addArt(string calldata name, string calldata description, string calldata image) external onlyOwner {
         string memory artURI = string(
             abi.encodePacked(
                 "data:application/json;base64,",
-                Base64.encode(bytes(abi.encodePacked('{"name":"', name, '","image":"', image, '"}')))
+                Base64.encode(
+                    bytes(
+                        abi.encodePacked(
+                            '{"name":"', name, '","image":"', image, '","description":"', description, '"}'
+                        )
+                    )
+                )
             )
         );
         uris[nextArtId] = artURI;
