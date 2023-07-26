@@ -4,7 +4,7 @@
 
 (defn c-onboarding []
   [:div {:class "text-center"}
-   [:span.font-bold.text-xl {:class "hand-written text-3xl"} "Welcome to my Art gallery 🤗"]
+   [:span {:class "font-bold hand-written text-4xl"} "Welcome to my Art gallery 🤗"]
    [:br]
    [:div.text-left.mt-2
     "My name is Theo. I draw with double ended fiber-tip pens. If you see something you like, feel free to collect  it. "

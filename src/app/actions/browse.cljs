@@ -54,7 +54,9 @@
     [:> PhotoView {:src url}
      [:img {:src url :class "cursor-zoom-in"}]]]
    [:br]
-   [:button {:class "btn-blue mr-4"} "Collect digital copy"]
+   [:button {:class "btn-blue mr-4"
+             :on-click #(actions/send :app.actions.collect/collect title)} 
+    "Collect digital copy"]
    [:button {:class "btn-gray"
              :on-click #(actions/send ::buy title)} 
     "Buy original copy"]])
