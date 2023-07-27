@@ -6,12 +6,11 @@
    ["@walletconnect/sign-client" :as SignClient]
    ["@multishq/walletconnect-modal" :refer [WalletConnectModal]]
    [app.utils :as ut]
+   [app.config :as config]
    [re-frame.core :as rf]))
 
-(def project-id "cb59d1d18fe7fb643719503a797a93fc")
-(def gnosis-chain "eip155:100")
-
-(def nft-contract "0x8af0db174ea3aec3e1f7b4f83c80a0415cbb036c")
+(def project-id config/walletconnect-project-id)
+(def gnosis-chain config/gnosis-chain)
 
 (defn- instanciate-modal
   [project-id]
@@ -50,7 +49,7 @@
                                         :chainId gnosis-chain
                                         :request {:method "eth_sendTransaction"
                                                   :params [{:from addr
-                                                            :to nft-contract
+                                                            :to config/art-contract
                                                             :data payload}]}})))
      (.then (fn []))
      (.catch (fn []))
@@ -62,22 +61,26 @@
  (fn [accounts]
    (some-> accounts first (str/split ":") last)))
 
-(defn c-collect [title]
-  [:div "You need to connect a crypto wallet to collect: "
-   [:div {:class "hand-written text-4xl mt-4 mb-4"} title]
+(defn c-collect [ap]
+  [:div
+  "Download the application " 
+   [:a.underline {:href "https://linen.app/" :target "_blank"} "Linen"]
+   " on your phone and connect to collect:" 
+   [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
    (if-let [addr @(rf/subscribe [::wallet-address])]
      [:div "✅ Connected as: " [:code.text-xs addr] [:br] [:br]
       [:button {:class "btn-blue disabled:opacity-70"
                 :disabled @(rf/subscribe [:get ::collecting?])
-                :on-click #(collect! 0)} 
+                :on-click #(collect! (js/parseInt (:token_id ap)))}
        "Collect"]]
      [:div
-      "Download the Linen wallet on your phone." [:br]
+      [:br]
       [:button {:class "btn-blue"
-                :on-click #(connect!)} 
-       "Connect"]])])
+                :on-click #(connect!)}
+       "Connect"]
+      [:div.italic.mt-2 "(Go to the 'Actions' tab in Linen to select 'WalletConnect')"]])])
 
 (defmethod actions/get-action ::collect
-  [_action _db title]
+  [_action _db ap]
   {:component c-collect
-   :state title})
+   :state ap})
