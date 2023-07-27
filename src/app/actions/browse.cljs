@@ -68,7 +68,7 @@
                  :on-click #(actions/send ::see-details art-piece)}])]
        [:div "fetching..."])]))
 
-(defn art-piece [ap]
+(defn art-piece [[ap collected?]]
   [:div 
    [:div {:class "hand-written font-bold text-4xl"} (:name ap)]
    [:div {:class "font-mono"} (:description ap) " / " (- config/max-mint (:amount ap)) " left"]
@@ -76,7 +76,8 @@
     [:> PhotoView {:src (:image_uri ap)}
      [:img {:src (:image_uri ap) :class "cursor-zoom-in"}]]]
    [:br]
-   [:button {:class "btn-blue mr-4"
+   [:button {:class "btn-blue mr-4 disabled:opacity-70"
+             :disabled collected?
              :on-click #(actions/send :app.actions.collect/collect ap)} 
     "Collect digital copy"]
    [:button {:class "btn-gray"
@@ -95,9 +96,9 @@
    :state ap})
 
 (defmethod actions/get-action ::see-details
-  [_action _db ap]
+  [_action _db [ap collected?]]
   {:component art-piece
-   :state ap})
+   :state [ap collected?]})
 
 (defmethod actions/get-action ::browse
   []

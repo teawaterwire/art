@@ -3,6 +3,7 @@
    [clojure.string :as str]
    [app.actions.entrypoint :as actions]
    [promesa.core :as p]
+   [lambdaisland.fetch :as fetch]
    ["@walletconnect/sign-client" :as SignClient]
    ["@multishq/walletconnect-modal" :refer [WalletConnectModal]]
    [app.utils :as ut]
@@ -84,3 +85,49 @@
   [_action _db ap]
   {:component c-collect
    :state ap})
+
+
+(defn fetch-art-pieces-collected! [addr]
+  (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/account/own/" 
+                       addr
+                       "?erc_type=erc1155"
+                       "&contract_address=" config/art-contract)
+          result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
+    (rf/dispatch [:set ::art-pieces-collected-data (-> (ut/j->c (:body result)) :data :content)])))
+
+(rf/reg-sub 
+ ::art-pieces-collected 
+ :<- [:get ::art-pieces-collected-data]
+ (fn [data]
+   (some->> data
+            (map (fn [art]
+                   (select-keys art [:name :description :token_id :image_uri :amount]))))))
+
+(defn c-collected [addr]
+  (if-not @(rf/subscribe [:get ::art-pieces-collected-data])
+    (fetch-art-pieces-collected! addr))
+  (fn []
+    [:<>
+     [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
+     [:br]
+     [:div {:class "grid gap-3 grid-cols-3"}
+      (for [{:keys [:image_uri] :as art-piece} @(rf/subscribe [:get ::art-pieces-collected])]
+        ^{:key image_uri}
+        [:img {:class "cursor-pointer"
+               :src image_uri
+               :on-click #(actions/send :app.actions.browse/see-details [art-piece true])}])]]))
+
+(defn c-collected-pre []
+  (if-let [addr @(rf/subscribe [::wallet-address])]
+    [c-collected addr]
+    [:div
+     [:button {:class "btn-blue"
+               :on-click #(connect!)}
+      "Connect"]
+     [:div.italic.mt-2 "(Connect with the crypto wallet you used to collect art pieces)"]]))
+
+(defmethod actions/get-action ::browse-collected
+  []
+  {:component c-collected-pre})
+
+(actions/add-primary-action ::browse-collected "Your collection" {:default? true})
