@@ -44,12 +44,17 @@
         addr @(rf/subscribe [::wallet-address])
         payload (str "0xa0712d68" ;; mint(uint256)
                      (.. artId (toString 16) (padStart 64 "0")))]
-    (.. sign-client (request (clj->js {:topic   (:topic session)
-                                       :chainId gnosis-chain
-                                       :request {:method "eth_sendTransaction"
-                                                 :params [{:from addr
-                                                           :to nft-contract
-                                                           :data payload}]}})))))
+    (rf/dispatch [:set ::collecting? true])
+    (-> 
+     (.. sign-client (request (clj->js {:topic   (:topic session)
+                                        :chainId gnosis-chain
+                                        :request {:method "eth_sendTransaction"
+                                                  :params [{:from addr
+                                                            :to nft-contract
+                                                            :data payload}]}})))
+     (.then (fn []))
+     (.catch (fn []))
+     (.finally (fn [] (rf/dispatch [:set ::collecting? false]))))))
 
 (rf/reg-sub
  ::wallet-address
@@ -62,7 +67,8 @@
    [:div {:class "hand-written text-4xl mt-4 mb-4"} title]
    (if-let [addr @(rf/subscribe [::wallet-address])]
      [:div "✅ Connected as: " [:code.text-xs addr] [:br] [:br]
-      [:button {:class "btn-blue"
+      [:button {:class "btn-blue disabled:opacity-70"
+                :disabled @(rf/subscribe [:get ::collecting?])
                 :on-click #(collect! 0)} 
        "Collect"]]
      [:div
