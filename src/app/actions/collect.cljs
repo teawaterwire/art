@@ -11,6 +11,8 @@
 (def project-id "cb59d1d18fe7fb643719503a797a93fc")
 (def gnosis-chain "eip155:100")
 
+(def nft-contract "0x8af0db174ea3aec3e1f7b4f83c80a0415cbb036c")
+
 (defn- instanciate-modal
   [project-id]
   (WalletConnectModal. (clj->js {:projectId        project-id
@@ -36,16 +38,18 @@
     (rf/dispatch [:set ::sign-client sign-client])
     (rf/dispatch [:set ::session (ut/j->c session)])))
 
-(defn collect! []
+(defn collect! [artId]
   (let [sign-client @(rf/subscribe [:get ::sign-client])
         session @(rf/subscribe [:get ::session])
-        addr @(rf/subscribe [::wallet-address])]
+        addr @(rf/subscribe [::wallet-address])
+        payload (str "0xa0712d68" ;; mint(uint256)
+                     (.. artId (toString 16) (padStart 64 "0")))]
     (.. sign-client (request (clj->js {:topic   (:topic session)
                                        :chainId gnosis-chain
                                        :request {:method "eth_sendTransaction"
                                                  :params [{:from addr
-                                                           :to addr
-                                                           :data ""}]}})))))
+                                                           :to nft-contract
+                                                           :data payload}]}})))))
 
 (rf/reg-sub
  ::wallet-address
@@ -59,7 +63,7 @@
    (if-let [addr @(rf/subscribe [::wallet-address])]
      [:div "✅ Connected as: " [:code.text-xs addr] [:br] [:br]
       [:button {:class "btn-blue"
-                :on-click #(collect!)} 
+                :on-click #(collect! 0)} 
        "Collect"]]
      [:div
       "Download the Linen wallet on your phone." [:br]
