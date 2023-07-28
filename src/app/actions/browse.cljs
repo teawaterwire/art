@@ -68,21 +68,28 @@
                  :on-click #(actions/send ::see-details art-piece)}])]
        [:div "fetching..."])]))
 
-(defn art-piece [[ap collected?]]
-  [:div 
-   [:div {:class "hand-written font-bold text-4xl"} (:name ap)]
-   [:div {:class "font-mono"} (:description ap) " / " (- config/max-mint (:amount ap)) " left"]
-   [:> PhotoProvider
-    [:> PhotoView {:src (:image_uri ap)}
-     [:img {:src (:image_uri ap) :class "cursor-zoom-in"}]]]
-   [:br]
-   [:button {:class "btn-blue mr-4 disabled:opacity-70"
-             :disabled collected?
-             :on-click #(actions/send :app.actions.collect/collect ap)} 
-    "Collect digital copy"]
-   [:button {:class "btn-gray"
-             :on-click #(actions/send ::buy ap)} 
-    "Buy original copy"]])
+(rf/reg-sub
+ ::collected?
+ :<- [:app.actions.collect/art-pieces-collected]
+ (fn [collected [_ token_id]]
+   (some #(= % token_id) (map :token_id collected))))
+
+(defn art-piece [ap]
+  (fn []
+    [:div 
+     [:div {:class "hand-written font-bold text-4xl"} (:name ap)]
+     [:div {:class "font-mono"} (:description ap) " / " (- config/max-mint (:amount ap)) " left"]
+     [:> PhotoProvider
+      [:> PhotoView {:src (:image_uri ap)}
+       [:img {:src (:image_uri ap) :class "cursor-zoom-in"}]]]
+     [:br]
+     [:button {:class "btn-blue mr-4 disabled:opacity-70"
+               :disabled @(rf/subscribe [::collected? (:token_id ap)])
+               :on-click #(actions/send :app.actions.collect/collect ap)} 
+      "Collect digital copy"]
+     [:button {:class "btn-gray"
+               :on-click #(actions/send ::buy ap)} 
+      "Buy original copy"]]))
 
 (defn buy-message [ap]
   [:div
@@ -96,9 +103,9 @@
    :state ap})
 
 (defmethod actions/get-action ::see-details
-  [_action _db [ap collected?]]
+  [_action _db ap]
   {:component art-piece
-   :state [ap collected?]})
+   :state ap})
 
 (defmethod actions/get-action ::browse
   []

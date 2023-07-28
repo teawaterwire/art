@@ -22,6 +22,17 @@
   [project-id]
   (.. SignClient/default (init #js {:projectId project-id})))
 
+(defn fetch-art-pieces-collected! [addr]
+  (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/account/own/" 
+                       addr
+                       "?erc_type=erc1155"
+                       "&contract_address=" config/art-contract)
+          result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
+    (rf/dispatch [:set ::art-pieces-collected-data (-> (ut/j->c (:body result)) :data :content)])))
+
+(defn session->addr [session]
+  (some-> session :namespaces :eip155 :accounts first (str/split ":") last))
+
 (defn connect! []
   (p/let [^js modal (instanciate-modal project-id)
           ^js sign-client (make-sign-client project-id)
@@ -33,10 +44,13 @@
                                                                   :events  ["accountsChanged"]}}})))
           _ (.. modal (openModal (clj->js {:uri (-> signer .-uri)})))
           ^js approval (-> signer .-approval)
-          session (approval)
-          _ (.. modal (closeModal))]
+          js-session (approval)
+          session (ut/j->c js-session)
+          _ (.. modal (closeModal))
+          addr (session->addr session)
+          _ (fetch-art-pieces-collected! addr)]
     (rf/dispatch [:set ::sign-client sign-client])
-    (rf/dispatch [:set ::session (ut/j->c session)])))
+    (rf/dispatch [:set ::session session])))
 
 (defn collect! [artId]
   (let [sign-client @(rf/subscribe [:get ::sign-client])
@@ -58,9 +72,9 @@
 
 (rf/reg-sub
  ::wallet-address
- :<- [:get ::session :namespaces :eip155 :accounts]
- (fn [accounts]
-   (some-> accounts first (str/split ":") last)))
+ :<- [:get ::session]
+ (fn [session]
+   (session->addr session)))
 
 (defn c-collect [ap]
   [:div
@@ -86,15 +100,6 @@
   {:component c-collect
    :state ap})
 
-
-(defn fetch-art-pieces-collected! [addr]
-  (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/account/own/" 
-                       addr
-                       "?erc_type=erc1155"
-                       "&contract_address=" config/art-contract)
-          result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
-    (rf/dispatch [:set ::art-pieces-collected-data (-> (ut/j->c (:body result)) :data :content)])))
-
 (rf/reg-sub 
  ::art-pieces-collected 
  :<- [:get ::art-pieces-collected-data]
@@ -103,23 +108,20 @@
             (map (fn [art]
                    (select-keys art [:name :description :token_id :image_uri :amount]))))))
 
-(defn c-collected [addr]
-  (if-not @(rf/subscribe [:get ::art-pieces-collected-data])
-    (fetch-art-pieces-collected! addr))
-  (fn []
-    [:<>
-     [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
-     [:br]
-     [:div {:class "grid gap-3 grid-cols-3"}
-      (for [{:keys [:image_uri] :as art-piece} @(rf/subscribe [:get ::art-pieces-collected])]
-        ^{:key image_uri}
-        [:img {:class "cursor-pointer"
-               :src image_uri
-               :on-click #(actions/send :app.actions.browse/see-details [art-piece true])}])]]))
+(defn c-collected []
+  [:<>
+   [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
+   [:br]
+   [:div {:class "grid gap-3 grid-cols-3"}
+    (for [{:keys [:image_uri] :as art-piece} @(rf/subscribe [::art-pieces-collected])]
+      ^{:key image_uri}
+      [:img {:class "cursor-pointer"
+             :src image_uri
+             :on-click #(actions/send :app.actions.browse/see-details art-piece)}])]])
 
 (defn c-collected-pre []
-  (if-let [addr @(rf/subscribe [::wallet-address])]
-    [c-collected addr]
+  (if @(rf/subscribe [::wallet-address])
+    [c-collected]
     [:div
      [:button {:class "btn-blue"
                :on-click #(connect!)}
