@@ -5,7 +5,7 @@
    :app-id "numero1"
    :support-id "support"})
 
-(def art-contract "0x8af0db174ea3aec3e1f7b4f83c80a0415cbb036c")
+(def art-contract "0x32f414a133c4dfd2a08df41485ffb8246f7538ae")
 (def max-mint 99)
 
 (def nftscan-key "dbDZKo4OMjVmjAlEuCGIU8A8")
