@@ -66,7 +66,7 @@
           [:img {:class "cursor-pointer"
                  :src image_uri 
                  :on-click #(actions/send ::see-details art-piece)}])]
-       [:div "fetching..."])]))
+       [:div "Entering the gallery..."])]))
 
 (rf/reg-sub
  ::collected?
@@ -83,7 +83,7 @@
       [:> PhotoView {:src (:image_uri ap)}
        [:img {:src (:image_uri ap) :class "cursor-zoom-in"}]]]
      [:br]
-     [:button {:class "btn-blue mr-4 disabled:opacity-70"
+     [:button {:class "btn-blue mr-4 mb-2 disabled:opacity-70"
                :disabled @(rf/subscribe [::collected? (:token_id ap)])
                :on-click #(actions/send :app.actions.collect/collect ap)} 
       "Collect digital copy"]

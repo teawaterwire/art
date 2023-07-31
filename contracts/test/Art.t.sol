@@ -3,8 +3,9 @@ pragma solidity 0.8.17;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {Art} from "../src/Art.sol";
+import "solmate/tokens/ERC1155.sol";
 
-contract ArtTest is Test {
+contract ArtTest is Test, ERC1155TokenReceiver {
     Art art;
 
     address alice = address(0xa);
@@ -33,7 +34,7 @@ contract ArtTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Art.AlreadyMinted.selector, 0));
         art.mint(0);
 
-        assertEq(art.mintedAmount(0), 2);
+        assertEq(art.mintedAmount(0), 3);
 
         art.addArt(name, description, image);
 

@@ -20,7 +20,7 @@ contract Art is ERC1155, Owned {
 
     constructor() Owned(msg.sender) {}
 
-    function mint(uint256 artId) external {
+    function mint(uint256 artId) public {
         if (artId >= nextArtId) revert ArtDoesNotExist(artId);
         if (mintedAmount[artId] >= ART_SUPPLY) revert SoldOut(artId);
         if (balanceOf[msg.sender][artId] > 0) revert AlreadyMinted(artId);
@@ -47,6 +47,6 @@ contract Art is ERC1155, Owned {
             )
         );
         uris[nextArtId] = artURI;
-        ++nextArtId;
+        mint(nextArtId++);
     }
 }

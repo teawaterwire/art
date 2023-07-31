@@ -52,23 +52,37 @@
     (rf/dispatch [:set ::sign-client sign-client])
     (rf/dispatch [:set ::session session])))
 
-(defn collect! [artId]
+(defn collect! [ap]
   (let [sign-client @(rf/subscribe [:get ::sign-client])
         session @(rf/subscribe [:get ::session])
         addr @(rf/subscribe [::wallet-address])
+        artId (js/parseInt (:token_id ap))
         payload (str "0xa0712d68" ;; mint(uint256)
                      (.. artId (toString 16) (padStart 64 "0")))]
     (rf/dispatch [:set ::collecting? true])
-    (-> 
-     (.. sign-client (request (clj->js {:topic   (:topic session)
+    (->
+     (.. sign-client (request (clj->js {:topic (:topic session)
                                         :chainId gnosis-chain
                                         :request {:method "eth_sendTransaction"
                                                   :params [{:from addr
                                                             :to config/art-contract
                                                             :data payload}]}})))
-     (.then (fn []))
-     (.catch (fn []))
-     (.finally (fn [] (rf/dispatch [:set ::collecting? false]))))))
+     (.then (fn [hash]
+              (actions/send ::minted [ap hash])))
+     (.catch (fn [] (rf/dispatch [:set ::collecting? false]))))))
+
+(defn c-minted [[ap hash]]
+  [:div "You collected the art piece: " 
+   [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
+   [:br]
+   [:span "Here's the blockchain " 
+    [:a.underline {:href (str "https://gnosisscan.io/tx/" hash) :target "_blank"} "receipt"]
+    "."]])
+
+(defmethod actions/get-action ::minted
+  [_action _db params]
+  {:component c-minted
+   :state params})
 
 (rf/reg-sub
  ::wallet-address
@@ -84,10 +98,14 @@
    [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
    (if-let [addr @(rf/subscribe [::wallet-address])]
      [:div "✅ Connected as: " [:code.text-xs addr] [:br] [:br]
-      [:button {:class "btn-blue disabled:opacity-70"
-                :disabled @(rf/subscribe [:get ::collecting?])
-                :on-click #(collect! (js/parseInt (:token_id ap)))}
-       "Collect"]]
+      (if @(rf/subscribe [:app.actions.browse/collected? (:token_id ap)])
+        [:div "Art piece already collected. " 
+         [:button {:class "text-blue-500 hover:underline font-bold"
+              :on-click #(actions/send ::browse-collected)} "See your collection"]]
+        [:button {:class "btn-blue disabled:opacity-70"
+                  :disabled @(rf/subscribe [:get ::collecting?])
+                  :on-click #(collect! ap)}
+         "Collect"])]
      [:div
       [:br]
       [:button {:class "btn-blue"
@@ -111,6 +129,10 @@
 (defn c-collected []
   [:<>
    [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
+   [:div.text-left.text-xs "("
+    [:button {:class "text-blue-500 hover:underline font-bold"
+              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [::wallet-address]))} "Refresh"]
+    ")"]
    [:br]
    [:div {:class "grid gap-3 grid-cols-3"}
     (for [{:keys [:image_uri] :as art-piece} @(rf/subscribe [::art-pieces-collected])]

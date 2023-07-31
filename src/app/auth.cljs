@@ -73,7 +73,7 @@
    (js/location.reload)))
 
 (defn login-panel []
-  [:<>
+  [:div.p-2
    [:div {:class "flex"}
     (if @(rf/subscribe [:get ::authenticating?])
       [:button {:class "animate-pulse btn-gray" :disabled true}
