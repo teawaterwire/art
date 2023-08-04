@@ -48,7 +48,7 @@
  ::art-pieces 
  :<- [:get ::art-pieces-data]
  (fn [data]
-   (some->> data
+   (some->> (seq data)
             (map (fn [art]
                    (select-keys art [:name :description :token_id :image_uri :amount]))))))
 

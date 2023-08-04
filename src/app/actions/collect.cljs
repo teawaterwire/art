@@ -122,7 +122,7 @@
  ::art-pieces-collected 
  :<- [:get ::art-pieces-collected-data]
  (fn [data]
-   (some->> data
+   (some->> (seq data)
             (map (fn [art]
                    (select-keys art [:name :description :token_id :image_uri :amount]))))))
 
@@ -134,12 +134,18 @@
               :on-click #(fetch-art-pieces-collected! @(rf/subscribe [::wallet-address]))} "Refresh"]
     ")"]
    [:br]
-   [:div {:class "grid gap-3 grid-cols-3"}
-    (for [{:keys [:image_uri] :as art-piece} @(rf/subscribe [::art-pieces-collected])]
-      ^{:key image_uri}
-      [:img {:class "cursor-pointer"
-             :src image_uri
-             :on-click #(actions/send :app.actions.browse/see-details art-piece)}])]])
+   (if-let [art-pieces-collected @(rf/subscribe [::art-pieces-collected])]
+     [:div {:class "grid gap-3 grid-cols-3"}
+      (for [{:keys [:image_uri] :as art-piece} art-pieces-collected]
+        ^{:key image_uri}
+        [:img {:class "cursor-pointer"
+               :src image_uri
+               :on-click #(actions/send :app.actions.browse/see-details art-piece)}])]
+     [:span
+      "You haven't collected any art pieces yet. "
+      [:button {:class "text-blue-500 hover:underline font-bold"
+                :on-click #(actions/send :app.actions.browse/browse)} "See art pieces"]
+      "."])])
 
 (defn c-collected-pre []
   (if @(rf/subscribe [::wallet-address])
