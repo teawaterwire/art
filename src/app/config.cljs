@@ -10,6 +10,8 @@
 
 (def nftscan-key "dbDZKo4OMjVmjAlEuCGIU8A8")
 
-(def walletconnect-project-id "cb59d1d18fe7fb643719503a797a93fc")
+(def magic-key "pk_live_614B6DA4011F777D")
+(def rpc-url "https://rpc.ankr.com/gnosis")
+(def chain-id 100)
 
-(def gnosis-chain "eip155:100")
+(def zerodev-id "b8f7bcf6-0a83-44c9-a6cc-c0259c8de17e")
