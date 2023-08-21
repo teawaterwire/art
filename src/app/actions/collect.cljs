@@ -102,7 +102,7 @@
    [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
    [:div.text-left.text-xs "("
     [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [::wallet-address]))} "Refresh"]
+              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address]))} "Refresh"]
     ")"]
    [:br]
    (if-let [art-pieces-collected @(rf/subscribe [::art-pieces-collected])]
@@ -119,7 +119,7 @@
       "."])])
 
 (defn c-collected-pre []
-  (if @(rf/subscribe [::wallet-address])
+  (if @(rf/subscribe [:get ::wallet-address])
     [c-collected]
     [:div
      [:button {:class "btn-blue"
