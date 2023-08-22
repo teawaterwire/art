@@ -8,43 +8,12 @@
    [app.config :as config]
    [app.utils :as ut]))
 
-(def images 
-  [;; poulet
-   ["Poulet"
-    "April 2023"
-    "https://bafybeieqayrn3rfwktwsu3m5qxnyy3qom2qpsc4bexgripirloei2n37ji.ipfs.nftstorage.link/"]
-   ;; grenouille
-   ["Grenouille"
-    "April 2023"
-    "https://bafybeigvead5nydfmgpounsaaby6b25oyyqzaxfd4q65qucahcrnecjufu.ipfs.nftstorage.link/"]
-   ;; teide
-   ["Teide"
-    "April 2023"
-    "https://bafybeicxu23xiav4wygaeleqyi37jqq7372q3k4ffeohb6e3otlypyi5pe.ipfs.nftstorage.link/"]
-   ;; montagne
-   ["Montagne"
-    "May 2023"
-    "https://bafybeiaeitwnvburowqoxzfhzzmuxrrtyep2vm2qgzaroxo4ulilkjwuhm.ipfs.nftstorage.link/"]
-   ;; oeil
-   ["Oeil"
-    "May 2023"
-    "https://bafybeib3gi6p6dgvap7ikqziupcnpadom4qyopkwrtk7apws3gdny7b3qq.ipfs.nftstorage.link/"]
-   ;; cross
-   ["Cross"
-    "June 2023"
-    "https://bafybeihg7xc7hnuquinodenx6fsf3cgresguns435fkqrmmectrqrw2vky.ipfs.nftstorage.link/"]
-   ;; hey
-   ["Hey"
-    "July 2023"
-    "https://bafybeie2z3cohdet3r76uu75hdyzgk25brma67qilqe262howlvef23wce.ipfs.nftstorage.link/"]
-   ])
-
 (defn fetch-art-pieces! []
   (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/assets/" config/art-contract)
           result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
     (rf/dispatch [:set ::art-pieces-data (-> (ut/j->c (:body result)) :data :content)])))
 
-(rf/reg-sub 
+(rf/reg-sub
  ::art-pieces 
  :<- [:get ::art-pieces-data]
  (fn [data]
@@ -52,7 +21,7 @@
             (map (fn [art]
                    (select-keys art [:name :description :token_id :image_uri :amount]))))))
 
-(defn art-pieces []
+(defn c-art-pieces []
   (if-not @(rf/subscribe [:get ::art-pieces-data])
     (fetch-art-pieces!))
   (fn []
@@ -109,6 +78,6 @@
 
 (defmethod actions/get-action ::browse
   []
-  {:component art-pieces})
+  {:component c-art-pieces})
 
 (actions/add-primary-action ::browse "See art pieces" {:default? true})
