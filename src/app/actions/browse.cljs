@@ -9,7 +9,7 @@
    [app.utils :as ut]))
 
 (defn fetch-art-pieces! []
-  (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/assets/" config/art-contract)
+  (p/let [api-url (str config/nftscan-base-api "assets/" config/art-contract)
           result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
     (rf/dispatch [:set ::art-pieces-data (-> (ut/j->c (:body result)) :data :content)])))
 

@@ -5,13 +5,16 @@
    :app-id "numero1"
    :support-id "support"})
 
-(def art-contract "0x32f414a133c4dfd2a08df41485ffb8246f7538ae")
+(def art-contract "0x8C9aC316DCE3AeC0592DAE85A587473E3DaDcCA1") ;; polygon
 (def max-mint 99)
 
+(def nftscan-base-api "https://polygonapi.nftscan.com/api/v2/")
 (def nftscan-key "dbDZKo4OMjVmjAlEuCGIU8A8")
 
-(def magic-key "pk_live_614B6DA4011F777D")
-(def rpc-url "https://rpc.ankr.com/gnosis")
-(def chain-id 100)
+(def explorer-base-url "https://polygonscan.com/")
+(def aa-explorer-base-url "https://app.jiffyscan.xyz/userOpHash/HASH?network=matic")
 
-(def zerodev-id "b8f7bcf6-0a83-44c9-a6cc-c0259c8de17e")
+(def rpc-url "https://rpc.ankr.com/polygon")
+(def chain-id 137)
+
+(def zerodev-id "9c7d2fe2-2892-4340-93d0-7548c4ad58ac")
