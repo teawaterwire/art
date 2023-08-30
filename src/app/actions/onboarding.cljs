@@ -7,7 +7,7 @@
    [:span {:class "font-bold hand-written text-4xl"} "Welcome to my Art gallery 🤗"]
    [:br]
    [:div.text-left.mt-2
-    "My name is Theo. I draw with double ended fiber-tip pens. If you see something you like, feel free to collect  it. "
+    "My name is Theo. I draw with double-ended fiber-tip pens. If you see something you like, feel free to collect  it. "
     [:button {:class "text-blue-500 hover:underline font-bold"
               :on-click #(actions/send :app.actions.browse/browse)} "See art pieces"]
     "."]

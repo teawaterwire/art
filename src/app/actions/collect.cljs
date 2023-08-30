@@ -1,82 +1,58 @@
 (ns app.actions.collect
   (:require
-   [clojure.string :as str]
    [app.actions.entrypoint :as actions]
    [promesa.core :as p]
    [lambdaisland.fetch :as fetch]
-   ["@walletconnect/sign-client" :as SignClient]
-   ["@multishq/walletconnect-modal" :refer [WalletConnectModal]]
+   ["@zerodevapp/sdk" :refer [getZeroDevSigner getPrivateKeyOwner]]
    [app.utils :as ut]
    [app.config :as config]
-   [re-frame.core :as rf]))
-
-(def project-id config/walletconnect-project-id)
-(def gnosis-chain config/gnosis-chain)
-
-(defn- instanciate-modal
-  [project-id]
-  (WalletConnectModal. (clj->js {:projectId        project-id
-                                 :standaloneChains [gnosis-chain]})))
-
-(defn- make-sign-client
-  [project-id]
-  (.. SignClient/default (init #js {:projectId project-id})))
+   [re-frame.core :as rf]
+   [clojure.string :as str]))
 
 (defn fetch-art-pieces-collected! [addr]
-  (p/let [api-url (str "https://gnosisapi.nftscan.com/api/v2/account/own/" 
+  (p/let [api-url (str config/nftscan-base-api "account/own/" 
                        addr
                        "?erc_type=erc1155"
                        "&contract_address=" config/art-contract)
           result (fetch/get api-url {:accept :json :headers {"X-API-KEY" config/nftscan-key}})]
     (rf/dispatch [:set ::art-pieces-collected-data (-> (ut/j->c (:body result)) :data :content)])))
 
-(defn session->addr [session]
-  (some-> session :namespaces :eip155 :accounts first (str/split ":") last))
-
 (defn connect! []
-  (p/let [^js modal (instanciate-modal project-id)
-          ^js sign-client (make-sign-client project-id)
-          ^js signer (.. sign-client (connect (clj->js {:requiredNamespaces
-                                                        {:eip155 {:methods ["personal_sign"
-                                                                            "eth_sendTransaction"
-                                                                            "eth_signTypedData"]
-                                                                  :chains  [gnosis-chain]
-                                                                  :events  ["accountsChanged"]}}})))
-          _ (.. modal (openModal (clj->js {:uri (-> signer .-uri)})))
-          ^js approval (-> signer .-approval)
-          js-session (approval)
-          session (ut/j->c js-session)
-          _ (.. modal (closeModal))
-          addr (session->addr session)
-          _ (fetch-art-pieces-collected! addr)]
-    (rf/dispatch [:set ::sign-client sign-client])
-    (rf/dispatch [:set ::session session])))
+  (rf/dispatch [:set ::connecting? true])
+  (p/let [pk (str "0x"
+                  (.. @(rf/subscribe [:get :app.auth/user :secret])
+                      (toString 16)
+                      (padStart 64 "0")))
+          ^js signer (getZeroDevSigner (clj->js
+                                        {:projectId config/zerodev-id
+                                         :owner (getPrivateKeyOwner pk)}))
+          addr (.getAddress signer)]
+    (fetch-art-pieces-collected! addr)
+    (rf/dispatch [:set ::connecting? false])
+    (rf/dispatch [:set ::wallet-address addr])
+    (rf/dispatch [:set ::signer signer])))
 
 (defn collect! [ap]
-  (let [sign-client @(rf/subscribe [:get ::sign-client])
-        session @(rf/subscribe [:get ::session])
-        addr @(rf/subscribe [::wallet-address])
-        artId (js/parseInt (:token_id ap))
-        payload (str "0xa0712d68" ;; mint(uint256)
-                     (.. artId (toString 16) (padStart 64 "0")))]
-    (rf/dispatch [:set ::collecting? true])
-    (->
-     (.. sign-client (request (clj->js {:topic (:topic session)
-                                        :chainId gnosis-chain
-                                        :request {:method "eth_sendTransaction"
-                                                  :params [{:from addr
-                                                            :to config/art-contract
-                                                            :data payload}]}})))
-     (.then (fn [hash]
-              (actions/send ::minted [ap hash])))
-     (.catch (fn [] (rf/dispatch [:set ::collecting? false]))))))
+  (rf/dispatch [:set ::collecting? true])
+  (p/let [^js signer @(rf/subscribe [:get ::signer])
+          artId (js/parseInt (:token_id ap))
+          payload (str "0xa0712d68" ;; mint(uint256)
+                       (.. artId (toString 16) (padStart 64 "0")))
+          tx-params {:to config/art-contract
+                     :data payload
+                     :value 0}
+          ^js tx (.sendTransaction signer (clj->js tx-params))
+          ^js receipt (.wait tx)
+          _ (fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address]))]
+    (rf/dispatch [:set ::collecting? false])
+    (actions/send ::minted [ap (.-transactionHash receipt)])))
 
 (defn c-minted [[ap hash]]
-  [:div "You collected the art piece: " 
+  [:div "You collected the art piece: "
    [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
    [:br]
-   [:span "Here's the blockchain " 
-    [:a.underline {:href (str "https://gnosisscan.io/tx/" hash) :target "_blank"} "receipt"]
+   [:span "Here's the blockchain "
+    [:a.underline {:href (str/replace config/aa-explorer-base-url "HASH" hash) :target "_blank"} "receipt"]
     "."]])
 
 (defmethod actions/get-action ::minted
@@ -84,20 +60,32 @@
   {:component c-minted
    :state params})
 
-(rf/reg-sub
- ::wallet-address
- :<- [:get ::session]
- (fn [session]
-   (session->addr session)))
+(defn c-connect []
+  [:button {:class "btn-blue disabled:opacity-70"
+                :disabled @(rf/subscribe [:get ::connecting?])
+                :on-click #(connect!)}
+       (if @(rf/subscribe [:get ::connecting?]) "Connecting..." "Connect")])
+
+(defn c-secret-revealed []
+  (js/setTimeout #(rf/dispatch [:set ::secret-revealed? false]) 7000)
+  (fn []
+    [:code.text-xs @(rf/subscribe [:get :app.auth/user :secret])]))
 
 (defn c-collect [ap]
   [:div
-  "Download the application " 
-   [:a.underline {:href "https://linen.app/" :target "_blank"} "Linen"]
-   " on your phone and connect to collect:" 
+   "You have to connect a wallet to collect:"
    [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
-   (if-let [addr @(rf/subscribe [::wallet-address])]
-     [:div "✅ Connected as: " [:code.text-xs addr] [:br] [:br]
+   (if-let [addr @(rf/subscribe [:get ::wallet-address])]
+     [:div 
+      "✅ Connected as: " [:code.text-xs addr] [:br]
+      "🚨 Make sure to save the session id: " 
+      (if @(rf/subscribe [:get ::secret-revealed?])
+        [c-secret-revealed]
+        [:code
+         {:class "cursor-pointer text-xs text-blue-500"
+          :on-click #(rf/dispatch [:set ::secret-revealed? true])} 
+         "reveal for 7 seconds"])
+      [:br] [:br]
       (if @(rf/subscribe [:app.actions.browse/collected? (:token_id ap)])
         [:div "Art piece already collected. " 
          [:button {:class "text-blue-500 hover:underline font-bold"
@@ -105,13 +93,10 @@
         [:button {:class "btn-blue disabled:opacity-70"
                   :disabled @(rf/subscribe [:get ::collecting?])
                   :on-click #(collect! ap)}
-         "Collect"])]
+         (if @(rf/subscribe [:get ::collecting?]) "Collecting..." "Collect")])]
      [:div
       [:br]
-      [:button {:class "btn-blue"
-                :on-click #(connect!)}
-       "Connect"]
-      [:div.italic.mt-2 "(Go to the 'Actions' tab in Linen to select 'WalletConnect')"]])])
+      [c-connect]])])
 
 (defmethod actions/get-action ::collect
   [_action _db ap]
@@ -128,10 +113,9 @@
 
 (defn c-collected []
   [:<>
-   [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
    [:div.text-left.text-xs "("
     [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [::wallet-address]))} "Refresh"]
+              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address]))} "Refresh"]
     ")"]
    [:br]
    (if-let [art-pieces-collected @(rf/subscribe [::art-pieces-collected])]
@@ -148,13 +132,12 @@
       "."])])
 
 (defn c-collected-pre []
-  (if @(rf/subscribe [::wallet-address])
-    [c-collected]
-    [:div
-     [:button {:class "btn-blue"
-               :on-click #(connect!)}
-      "Connect"]
-     [:div.italic.mt-2 "(Connect with the crypto wallet you used to collect art pieces)"]]))
+  [:<> 
+   [:div {:class "hand-written font-bold text-4xl"} "Your collection"]
+   (if @(rf/subscribe [:get ::wallet-address])
+     [c-collected]
+     [:div.mt-2
+      [c-connect]])])
 
 (defmethod actions/get-action ::browse-collected
   []
