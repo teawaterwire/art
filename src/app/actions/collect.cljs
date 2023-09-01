@@ -6,6 +6,7 @@
    ["@zerodevapp/sdk" :refer [getZeroDevSigner getPrivateKeyOwner]]
    [app.utils :as ut]
    [app.config :as config]
+   [reagent.core :as r]
    [re-frame.core :as rf]
    [clojure.string :as str]))
 
@@ -42,9 +43,8 @@
                      :data payload
                      :value 0}
           ^js tx (.sendTransaction signer (clj->js tx-params))
-          ^js receipt (.wait tx)
-          _ (fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address]))]
-    (rf/dispatch [:set ::collecting? false])
+          ^js receipt (.wait tx)]
+    (rf/dispatch [:set ::just-collected? (:token_id ap) true])
     (actions/send ::minted [ap (.-transactionHash receipt)])))
 
 (defn c-minted [[ap hash]]
@@ -86,7 +86,9 @@
           :on-click #(rf/dispatch [:set ::secret-revealed? true])} 
          "reveal for 7 seconds"])
       [:br] [:br]
-      (if @(rf/subscribe [:app.actions.browse/collected? (:token_id ap)])
+      (if (or
+           @(rf/subscribe [:get ::just-collected? (:token_id ap)])
+           @(rf/subscribe [:app.actions.browse/collected? (:token_id ap)]))
         [:div "Art piece already collected. " 
          [:button {:class "text-blue-500 hover:underline font-bold"
               :on-click #(actions/send ::browse-collected)} "See your collection"]]
@@ -111,12 +113,25 @@
             (map (fn [art]
                    (select-keys art [:name :description :token_id :image_uri :amount]))))))
 
+(defn c-refresh []
+  (let [delay 60
+        timer (r/atom 0)
+        refresh! (fn []
+                  (reset! timer 0)
+                  (fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address])))]
+    (js/setInterval #(swap! timer inc) 1000)
+    (fn []
+      [:div.text-left.text-xs "("
+       (if (> @timer delay)
+         [:button {:class "text-blue-500 hover:underline font-bold"
+                   :on-click refresh!} 
+          "Refresh now"]
+         [:span "Refresh in " (- delay @timer) " seconds"])
+       ")"])))
+
 (defn c-collected []
   [:<>
-   [:div.text-left.text-xs "("
-    [:button {:class "text-blue-500 hover:underline font-bold"
-              :on-click #(fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address]))} "Refresh"]
-    ")"]
+   [c-refresh]
    [:br]
    (if-let [art-pieces-collected @(rf/subscribe [::art-pieces-collected])]
      [:div {:class "grid gap-3 grid-cols-3"}
