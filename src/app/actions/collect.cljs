@@ -51,6 +51,8 @@
   [:div "You collected the art piece: "
    [:span {:class "hand-written text-4xl ml-4 "} (:name ap)]
    [:br]
+   [:span "It will appear in your collection in a few minutes."]
+   [:br]
    [:span "Here's the blockchain "
     [:a.underline {:href (str/replace config/aa-explorer-base-url "HASH" hash) :target "_blank"} "receipt"]
     "."]])
@@ -115,17 +117,17 @@
 
 (defn c-refresh []
   (let [delay 60
-        timer (r/atom 0)
+        timer (r/atom delay)
         refresh! (fn []
                   (reset! timer 0)
                   (fetch-art-pieces-collected! @(rf/subscribe [:get ::wallet-address])))]
-    (js/setInterval #(swap! timer inc) 1000)
+    (js/setInterval #(swap! timer (partial + 10)) 10000)
     (fn []
       [:div.text-left.text-xs "("
-       (if (> @timer delay)
+       (if (>= @timer delay)
          [:button {:class "text-blue-500 hover:underline font-bold"
                    :on-click refresh!} 
-          "Refresh now"]
+          "Refresh"]
          [:span "Refresh in " (- delay @timer) " seconds"])
        ")"])))
 
